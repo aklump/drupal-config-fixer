@@ -1,0 +1,16 @@
+{
+  "name": "aklump/drupal-config-fixer",
+  "description": "Helps with configuration management",
+  "homepage": "https://github.com/aklump/drupal-config-fixer",
+  "authors": [
+    {
+      "name": "Aaron Klump",
+      "homepage": "http://www.intheloftstudios.com",
+      "role": "Senior Developer"
+    }
+  ],
+  "require": {
+    "php": "^7.4",
+    "symfony/yaml": "^5.4|^6|^7"
+  }
+}

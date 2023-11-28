@@ -1,0 +1,6 @@
+composer.lock
+vendor/
+.idea/
+.web_package/
+feature*
+*.jig*
