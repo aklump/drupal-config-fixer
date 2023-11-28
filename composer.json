@@ -9,8 +9,14 @@
       "role": "Senior Developer"
     }
   ],
+  "autoload": {
+    "psr-4": {
+      "AKlump\\Drupal\\ConfigFixer\\": "src"
+    }
+  },
   "require": {
-    "php": "^7.4",
-    "symfony/yaml": "^5.4|^6|^7"
+    "php": "^7.4|^8",
+    "symfony/yaml": "^5.4|^6|^7",
+    "mcaskill/php-array-insert": "^1"
   }
 }
