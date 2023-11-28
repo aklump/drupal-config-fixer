@@ -12,12 +12,29 @@ class Files {
     $this->setBasePath($base_path);
   }
 
-  public function delete(array $relative_paths): self {
-    foreach ($relative_paths as $relative_path) {
-      $path = $this->getBasePath() . "/$relative_path";
-      if (!file_exists($path)) {
-        continue;
-      }
+  /**
+   * GIT restore a deleted file.
+   *
+   * @param string $relative_path
+   *
+   * @return $this
+   */
+  public function restore(string $relative_path): self {
+    exec(sprintf('git restore %s/%s', $this->getBasePath(), $relative_path));
+
+    return $this;
+  }
+
+  /**
+   * Delete a file.
+   *
+   * @param $relative_path
+   *
+   * @return $this
+   */
+  public function delete($relative_path): self {
+    $path = $this->getBasePath() . "/$relative_path";
+    if (file_exists($path)) {
       unlink($path);
     }
 

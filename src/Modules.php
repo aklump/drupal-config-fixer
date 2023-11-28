@@ -19,7 +19,7 @@ class Modules {
    *
    * @return $this
    */
-  public function enable($insert_module, $after_module): self {
+  public function enable(string $insert_module, string $after_module): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
     $data['module'] = $data['module'] ?? [];
@@ -38,12 +38,10 @@ class Modules {
    *
    * @return $this
    */
-  public function disable(array $modules): self {
+  public function disable(string $module): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
-    foreach ($modules as $module) {
-      unset($data['module'][$module]);
-    }
+    unset($data['module'][$module]);
     $this->save($path, $data);
 
     return $this;
@@ -55,7 +53,7 @@ class Modules {
    *
    * @return $this
    */
-  public function addDependency(string $module, $after_module = NULL): self {
+  public function addDependency(string $module, string $after_module = NULL): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
     $data['dependencies'] += ['module' => []];
