@@ -15,4 +15,8 @@
     ]
     ```
 
-1. Then `composer require aklump/drupal-config-fixer:@dev`
+1. Then `composer require aklump/drupal-config-fixer:^0.0`    
+
+## Web Package Installation
+
+1. Follow the above instructions using _.web_package/composer.json_
