@@ -3,3 +3,4 @@ vendor/
 .idea/
 feature*
 *.jig*
+reports/
