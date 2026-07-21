@@ -1,0 +1,11 @@
+#mermaid:
+#  width: 1000
+composer: { }
+image:
+  max_width: 830
+  pixel_density: 2
+snippets:
+  -
+    group: example
+    source:
+      - ./examples/web_package_hook.php

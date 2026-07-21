@@ -1,1 +1,9 @@
-title: Drupal Config Fixer
+title: 'Drupal Config Fixer'
+uuid: 2751304d-8b96-4509-92b5-dc06acd1ffc1
+chapters:
+  -
+    id: general
+    title: General
+    pages:
+      - changelog
+      - readme

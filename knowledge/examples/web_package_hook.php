@@ -1,36 +1,3 @@
-# Drupal Config Fixer
-
-![Hero](images/drupal-config-fixer.jpg)
-
-##        Install with Composer
-
-1. Installation requires explicit repositories:
-   
-   ```shell
-   composer config repositories.faa5886b64a47005a53fea397f71a58e github https://github.com/aklump/drupal-config-fixer
-   ```
-
-2. Require the latest stable version:
-   
-   ```shell
-   composer require aklump/drupal-config-fixer:^0.0
-   ```
-3. ... or require the dev channel:
-   
-   ```shell
-   composer config minimum-stability dev
-   composer require aklump/drupal-config-fixer:@dev
-   ```
-
-## Web Package Installation
-
-Follow the above instructions from within _.web_package/composer.json_
-
-Here is an example Web Package hook file;
-
-**File:** `web_package_hook.php`
-
-```php
 <?php
 
 use AKlump\Drupal\ConfigFixer\ConfigFixer;
@@ -76,4 +43,3 @@ $fix->roles(['site_admin'])
 $fix->roles(['anonymous', 'authenticated'])
   ->removeDependency('environment_indicator')
   ->removePermission('access environment indicator');
-```
