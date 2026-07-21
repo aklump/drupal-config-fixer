@@ -2,27 +2,37 @@
 
 ![Hero](images/drupal-config-fixer.jpg)
 
-## Install with Composer
+##        Install with Composer
 
-1. Because this is an unpublished package, you must define it's repository in your project's _composer.json_ file. Add the following to _composer.json_:
+1. Installation requires explicit repositories:
+   
+   ```shell
+   composer config repositories.faa5886b64a47005a53fea397f71a58e github https://github.com/aklump/drupal-config-fixer
+   ```
 
-    ```json
-    "repositories": [
-        {
-            "type": "github",
-            "url": "https://github.com/aklump/drupal-config-fixer"
-        }
-    ]
-    ```
-
-1. Then `composer require aklump/drupal-config-fixer:^0.0`    
+2. Require the latest stable version:
+   
+   ```shell
+   composer require aklump/drupal-config-fixer:^0.0
+   ```
+3. ... or require the dev channel:
+   
+   ```shell
+   composer config minimum-stability dev
+   composer require aklump/drupal-config-fixer:@dev
+   ```
 
 ## Web Package Installation
 
 Follow the above instructions from within _.web_package/composer.json_
 
 Here is an example Web Package hook file;
+
+**File:** `web_package_hook.php`
+
 ```php
+<?php
+
 use AKlump\Drupal\ConfigFixer\ConfigFixer;
 
 $fix = new ConfigFixer('./private/default/config/base');
