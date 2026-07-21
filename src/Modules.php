@@ -53,7 +53,7 @@ class Modules {
    *
    * @return $this
    */
-  public function addDependency(string $module, string $after_module = NULL): self {
+  public function addDependency(string $module, ?string $after_module = NULL): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
     $data['dependencies'] += ['module' => []];
