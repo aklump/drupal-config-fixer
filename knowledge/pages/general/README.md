@@ -78,7 +78,7 @@ Run it again and the file stays the same. Drupal is not involved at any point: t
 
 ## Installation
 
-Run these from your project root, the directory that holds your `composer.json`. The package is not on Packagist, so first add its GitHub repository:
+Run these from your project root, the directory that holds your `composer.json`; in an empty directory, run `composer init` first. The package is not on Packagist, so first add its GitHub repository:
 
 ```shell
 composer config repositories.drupal-config-fixer github https://github.com/aklump/drupal-config-fixer
@@ -90,7 +90,7 @@ Then require the latest stable version:
 composer require aklump/drupal-config-fixer:^0.0
 ```
 
-Or require the dev channel. The `@dev` flag applies to this package only, so the rest of your project stays on stable releases:
+Or, instead of the stable version, require the dev channel. The `@dev` flag applies to this package only, so the rest of your project stays on stable releases:
 
 ```shell
 composer require aklump/drupal-config-fixer:@dev
@@ -98,19 +98,21 @@ composer require aklump/drupal-config-fixer:@dev
 
 ### Web Package
 
-To run the fixes as a [Web Package](https://github.com/aklump/web_package) build hook, run the commands above from within `.web_package/` so the dependency goes into `.web_package/composer.json`, then call the library from a hook file. See the example under Usage.
+To run the fixes as a [Web Package](https://github.com/aklump/web_package) build hook, run the commands above from within `.web_package/` so the dependency goes into `.web_package/composer.json` (run `composer init` there first if it has none), then call the library from a hook file. See the example under Usage.
 
 ## Usage
 
 `new ConfigFixer($base_path)` points at your config sync directory. A relative `$base_path` resolves from the current working directory, and every path you pass to a method is relative to `$base_path`. It has three entry points, and every method on them returns the same object, so calls chain. Each call reads the file, changes it and writes it back straight away.
 
+Files are read and written with Symfony YAML, so a rewritten file loses its comments, gets normalized quoting, and has nesting deeper than four levels written inline (`{ ... }`). A key the file did not have is added at the end, as `dependencies:` lands after `permissions:` in the Quick Start. This can differ from how Drupal itself writes the file, so review the diff before you commit. A file a call needs but cannot find throws a Symfony `ParseException`; an empty file is treated as having no data.
+
 ### Modules: `core.extension.yml`
 
-The method names follow Drupal's terms, but they only change the file. A module is installed when Drupal imports a `core.extension.yml` that lists it, not when you call `enable()`, and a module's own config files are never touched.
+The method names follow Drupal's terms, but they only change the file. A module is installed when Drupal imports a `core.extension.yml` that lists it, not when you call `enable()`, and a module's own config files are never touched. Unlike `roles()`, these methods rewrite `core.extension.yml` on every call, even when nothing changed.
 
 | Method | Effect |
 |---|---|
-| `enable($module, $after_module)` | Adds `$module` to the module list, with weight 0, right after `$after_module`. If `$after_module` is not in the list, it is appended at the end. Does nothing if `$module` is already there. The list is not re-sorted the way Drupal sorts it. |
+| `enable($module, $after_module)` | `$after_module` is required. Adds `$module` to the module list, with weight 0, right after `$after_module`. If `$after_module` is not in the list, it is appended at the end. Does nothing if `$module` is already there. The list is not re-sorted the way Drupal sorts it. |
 | `disable($module)` | Takes `$module` off the module list. Its config files stay; remove them with `files()->delete()` if you need to. |
 | `addDependency($module, $after_module = NULL)` | Adds a module to `dependencies.module`, after `$after_module` or, with none, at the end. |
 | `removeDependency($module)` | Removes a module from `dependencies.module`. |
@@ -130,8 +132,8 @@ The method names follow Drupal's terms, but they only change the file. A module 
 
 | Method | Effect |
 |---|---|
-| `restore($relative_path)` | Runs `git restore` on the path, so a file the export deleted or changed comes back as committed. Wildcards work, matched by git as a pathspec: `restore('monolog*.*')`. Throws a `RuntimeException` if git fails, for example when the path matches no file git knows. |
-| `delete($relative_path)` | Deletes the file if it exists. |
+| `restore($relative_path)` | Runs `git restore` on the path, so a file the export deleted or changed comes back as committed. Wildcards work, matched by git as a pathspec: `restore('monolog*.*')`. Git runs from the current working directory, which must be inside the repository. Throws a `RuntimeException` if git fails, for example when the path matches no file git knows. |
+| `delete($relative_path)` | Deletes exactly that file if it exists, and does nothing if it does not. No wildcards. |
 
 ### A complete hook
 
