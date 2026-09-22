@@ -23,6 +23,10 @@ class VerifyDrupalFormat {
    * @throws \AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException
    */
   public function __invoke(string $path, string $contents): void {
+    // An empty file has no format to preserve, and Yaml::dump([]) is '{  }'.
+    if ('' === $contents) {
+      return;
+    }
     $data = Yaml::parse($contents) ?? [];
     $rewritten = (new DumpYaml())($data);
     if ($rewritten === $contents) {

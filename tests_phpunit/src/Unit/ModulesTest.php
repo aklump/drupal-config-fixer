@@ -86,4 +86,10 @@ class ModulesTest extends TestCase {
     $this->assertSame('', file_get_contents($this->getTempConfigDirectory() . '/core.extension.yml'));
   }
 
+  public function testEnableOnEmptyFileWritesModuleList() {
+    file_put_contents($this->getTempConfigDirectory() . '/core.extension.yml', '');
+    (new Modules($this->getTempConfigDirectory()))->enable('node');
+    $this->assertSame("module:\n  node: 0\n", file_get_contents($this->getTempConfigDirectory() . '/core.extension.yml'));
+  }
+
 }

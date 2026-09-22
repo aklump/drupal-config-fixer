@@ -19,6 +19,8 @@ class VerifyDrupalFormatTest extends TestCase {
     $tests[] = ["dependencies: {  }\nid: a\n"];
     $tests[] = ["a:\n  b:\n    c:\n      d:\n        e: 1\n"];
     $tests[] = ["body: |-\n  line one\n  line two\nid: a\n"];
+    // An empty file: nothing to preserve.
+    $tests[] = [''];
 
     return $tests;
   }

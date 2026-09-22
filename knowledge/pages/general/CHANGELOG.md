@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `Modules::enable()` and `ConfigEntities::addDependency()` threw `DrupalFormatMismatchException` on an empty file; an empty file is now written normally.
+
 ## [0.0.13] - 2026-09-22
 
 ### Added

@@ -106,4 +106,10 @@ class ConfigEntitiesTest extends TestCase {
     (new ConfigEntities($this->getTempConfigDirectory(), ['block.block.missing']))->addDependency('captcha');
   }
 
+  public function testAddDependencyOnEmptyFile() {
+    file_put_contents($this->getTempConfigDirectory() . '/block.block.a.yml', '');
+    (new ConfigEntities($this->getTempConfigDirectory(), ['block.block.a']))->addDependency('node');
+    $this->assertSame(['dependencies' => ['module' => ['node']]], $this->readYaml('block.block.a.yml'));
+  }
+
 }
