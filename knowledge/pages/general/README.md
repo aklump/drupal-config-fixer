@@ -17,13 +17,13 @@ Developing locally, you change things that should never ship: a debug module you
 
 Modules that manage this from inside Drupal, such as Config Split, depend on Drupal's own config system. Drupal Config Fixer only edits files. You write the corrections once as a short PHP script and run it after each export to take the local adjustments back out, so the config you commit is ready for production.
 
-Every change is to what the config says, never to the site. `enable()` and `disable()` add a module to, or take it off, the module list in `core.extension.yml`; Drupal installs or uninstalls the module only when it imports that file. The same holds for the permissions and module dependencies it adds to and removes from `user.role.*.yml`, and for the config files it deletes or restores from git.
+Every change is to what the config says, never to the site. `enable()` and `disable()` add a module to, or take it off, the module list in `core.extension.yml`; Drupal installs or uninstalls the module only when it imports that file. The same holds for the permissions and module dependencies it adds to and removes from `user.role.*.yml`, and for the config files it deletes outright or restores from git.
 
 Each call checks the file first, so running the script twice gives the same files as running it once. It also writes each file in the format and order Drupal uses, so the next export does not re-sort what it changed.
 
 ## Quick Start
 
-From your project root (the directory with your `composer.json`), install it. It is served from GitHub, not Packagist:
+From your project root (the directory with your `composer.json`; in an empty directory, run `composer init -n` first), install it. It is served from GitHub, not Packagist:
 
 ```shell
 composer config repositories.drupal-config-fixer github https://github.com/aklump/drupal-config-fixer
@@ -90,7 +90,7 @@ Run it again and nothing changes. Drupal is not involved at any point: the scrip
 
 ## Installation
 
-Run these from your project root, the directory that holds your `composer.json`; in an empty directory, run `composer init` first. The package is not on Packagist, so first add its GitHub repository:
+Run these from your project root, the directory that holds your `composer.json`; in an empty directory, run `composer init -n` first. The package is not on Packagist, so first add its GitHub repository:
 
 ```shell
 composer config repositories.drupal-config-fixer github https://github.com/aklump/drupal-config-fixer
@@ -114,7 +114,9 @@ To run the fixes as a [Web Package](https://github.com/aklump/web_package) build
 
 ## Usage
 
-`new ConfigFixer($base_path)` points at your config sync directory. A relative `$base_path` resolves from the current working directory, and every path you pass to a method is relative to `$base_path`. It has four entry points, and every method on them returns the same object, so calls chain. Each call reads the file, changes it and writes it back straight away, and only when something actually changed.
+`new ConfigFixer($base_path)` points at your config sync directory. A relative `$base_path` resolves from the current working directory, and every path you pass to a method is relative to `$base_path`. It has four entry points, and every method on them returns the same object, so calls chain. Each call reads the file, changes it and writes it back straight away, and only when something actually changed. Calls are not transactional: when one throws, files already written by earlier calls, or for earlier roles in the same call, stay written.
+
+Older scripts may pass a second, "after" argument to `enable()`, `addPermission()` or `addDependency()`. The library ignores it, since the position now comes from Drupal's sort order, and triggers an `E_USER_WARNING` naming the method and the line of your script to fix. The call still runs.
 
 ### Written the way Drupal writes it
 
@@ -128,7 +130,7 @@ user.role.editor.yml: permissions are not in the order this library sorts them. 
 
 A file the call does not need to change is never checked. A file you edited by hand, for example to add a comment, fails the check the same way; export it again from Drupal first.
 
-A file a call needs but cannot find throws a Symfony `ParseException`; an empty file is treated as having no data.
+A file a call needs but cannot find throws a Symfony `ParseException`; an empty file is treated as having no data, and is not format-checked, so a call can write to it.
 
 ### Modules: `core.extension.yml`
 
@@ -152,12 +154,12 @@ The method names follow Drupal's terms, but they only change the file. A module 
 
 ### Any config entity: `config()`
 
-`$fix->config(['block.block.captcha', 'views.view.content'])` edits any config entity files, named without or with `.yml`. Use it to add or remove the module dependency of a block, a view, a field or anything else that records one.
+`$fix->config(['block.block.captcha', 'views.view.content'])` edits any config entity files, named without or with `.yml`. Use it to add or remove the module dependency of a block, a view, a field or anything else that records one. Only module dependencies can be added or removed; `config`, `content`, `theme` and `enforced` dependencies already in a file are kept as they are.
 
 | Method | Effect |
 |---|---|
 | `addDependency($module)` | Adds the module to `dependencies.module`, sorted into place. |
-| `removeDependency($module)` | Removes the module dependency. |
+| `removeDependency($module)` | Removes the module dependency. When it was the last one, `dependencies` is left as `{  }`, as Drupal writes it. |
 
 ### Files
 
