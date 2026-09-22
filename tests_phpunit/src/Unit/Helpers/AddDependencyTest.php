@@ -41,6 +41,34 @@ class AddDependencyTest extends TestCase {
       NULL,
       'lorem',
     ];
+    $tests[] = [
+      ['dependencies' => ['module' => ['foo', 'baz', 'bar']]],
+      ['dependencies' => ['module' => ['foo', 'bar']]],
+      'baz',
+      'foo',
+      'module',
+    ];
+    $tests[] = [
+      ['dependencies' => ['module' => ['foo', 'bar']]],
+      ['dependencies' => ['module' => ['foo', 'bar']]],
+      'foo',
+      'bar',
+      'module',
+    ];
+    $tests[] = [
+      ['dependencies' => ['module' => ['foo', 'bar']]],
+      ['dependencies' => ['module' => ['foo']]],
+      'bar',
+      'missing',
+      'module',
+    ];
+    $tests[] = [
+      ['id' => 'editor', 'dependencies' => ['config' => ['x'], 'module' => ['foo']]],
+      ['id' => 'editor', 'dependencies' => ['config' => ['x']]],
+      'foo',
+      NULL,
+      'module',
+    ];
 
     return $tests;
   }

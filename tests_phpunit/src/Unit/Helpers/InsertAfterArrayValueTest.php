@@ -24,6 +24,30 @@ class InsertAfterArrayValueTest extends TestCase {
       'bar',
       'foo',
     ];
+    $tests[] = [
+      ['foo', 'baz', 'bar'],
+      ['foo', 'bar'],
+      'baz',
+      'foo',
+    ];
+    $tests[] = [
+      ['foo', 'bar'],
+      ['foo'],
+      'bar',
+      'missing',
+    ];
+    $tests[] = [
+      ['foo'],
+      [],
+      'foo',
+      'missing',
+    ];
+    $tests[] = [
+      ['foo', 'bar'],
+      ['foo'],
+      'bar',
+      '',
+    ];
 
     return $tests;
   }
