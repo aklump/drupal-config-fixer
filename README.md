@@ -14,7 +14,7 @@ Modules that manage this from inside Drupal, such as Config Split, depend on Dru
 
 Every change is to what the config says, never to the site. `enable()` and `disable()` add a module to, or take it off, the module list in `core.extension.yml`; Drupal installs or uninstalls the module only when it imports that file. The same holds for the permissions and module dependencies it adds to and removes from `user.role.*.yml`, and for the config files it deletes or restores from git.
 
-Each call checks the file first, so running the script twice gives the same files as running it once.
+Each call checks the file first, so running the script twice gives the same files as running it once. It also writes each file in the format and order Drupal uses, so the next export does not re-sort what it changed.
 
 ## Quick Start
 
@@ -25,17 +25,26 @@ composer config repositories.drupal-config-fixer github https://github.com/aklum
 composer require aklump/drupal-config-fixer:^0.0
 ```
 
-Say `config/user.role.content_editor.yml` contains:
+Say you turned on Devel locally and gave content editors a Devel permission to test something, and `drush config:export` wrote both into your config. `config/user.role.content_editor.yml` now contains:
 
 ```yaml
+uuid: 6d7c8a4e-0000-4000-8000-000000000001
+langcode: en
+status: true
+dependencies:
+  module:
+    - devel
 id: content_editor
 label: 'Content editor'
+weight: 2
+is_admin: false
 permissions:
   - 'access content overview'
+  - 'access devel information'
   - 'set page title'
 ```
 
-Save this as `fix.php` in your project root and run `php fix.php`. The second argument of `addPermission()` is the permission to insert after; leave it out to append.
+Save this as `fix.php` in your project root and run `php fix.php`:
 
 ```php
 <?php
@@ -44,36 +53,39 @@ require __DIR__ . '/vendor/autoload.php';
 use AKlump\Drupal\ConfigFixer\ConfigFixer;
 
 $fix = new ConfigFixer('./config');
+$fix->modules()->disable('devel');
 $fix->roles(['content_editor'])
-  ->addDependency('captcha')
-  ->addPermission('skip CAPTCHA', 'access content overview');
+  ->removePermission('access devel information')
+  ->removeDependency('devel');
 ```
 
-The role file now reads:
+Devel is gone from the module list in `core.extension.yml`, and the role file now reads:
 
 ```yaml
+uuid: 6d7c8a4e-0000-4000-8000-000000000001
+langcode: en
+status: true
+dependencies: {  }
 id: content_editor
 label: 'Content editor'
+weight: 2
+is_admin: false
 permissions:
   - 'access content overview'
-  - 'skip CAPTCHA'
   - 'set page title'
-dependencies:
-  module:
-    - captcha
 ```
 
-Run it again and the file stays the same. Drupal is not involved at any point: the script only rewrote the file, ready to commit.
+Run it again and nothing changes. Drupal is not involved at any point: the script only rewrote the files, ready to commit.
 
 ## Requirements
 
 - A Drupal 8 or later site whose configuration is exported as YAML. The library reads only those files, so no Drupal version is loaded or checked.
 - PHP 7.3 or newer. The test suite runs on PHP 7.3 through 8.5.
-- `git` on your `PATH`, only if you use `files()->restore()`. It runs `git restore`, so the script must run from inside the repository that holds the config.
+- `git` on your `PATH`, only if you use `files()->restore()`.
 
 ## Installation
 
-Run these from your project root, the directory that holds your `composer.json`. The package is not on Packagist, so first add its GitHub repository:
+Run these from your project root, the directory that holds your `composer.json`; in an empty directory, run `composer init` first. The package is not on Packagist, so first add its GitHub repository:
 
 ```shell
 composer config repositories.drupal-config-fixer github https://github.com/aklump/drupal-config-fixer
@@ -85,7 +97,7 @@ Then require the latest stable version:
 composer require aklump/drupal-config-fixer:^0.0
 ```
 
-Or require the dev channel. The `@dev` flag applies to this package only, so the rest of your project stays on stable releases:
+Or, instead of the stable version, require the dev channel. The `@dev` flag applies to this package only, so the rest of your project stays on stable releases:
 
 ```shell
 composer require aklump/drupal-config-fixer:@dev
@@ -93,11 +105,25 @@ composer require aklump/drupal-config-fixer:@dev
 
 ### Web Package
 
-To run the fixes as a [Web Package](https://github.com/aklump/web_package) build hook, run the commands above from within `.web_package/` so the dependency goes into `.web_package/composer.json`, then call the library from a hook file. See the example under Usage.
+To run the fixes as a [Web Package](https://github.com/aklump/web_package) build hook, run the commands above from within `.web_package/` so the dependency goes into `.web_package/composer.json` (run `composer init` there first if it has none), then call the library from a hook file. See the example under Usage.
 
 ## Usage
 
-`new ConfigFixer($base_path)` points at your config sync directory. A relative `$base_path` resolves from the current working directory, and every path you pass to a method is relative to `$base_path`. It has three entry points, and every method on them returns the same object, so calls chain. Each call reads the file, changes it and writes it back straight away.
+`new ConfigFixer($base_path)` points at your config sync directory. A relative `$base_path` resolves from the current working directory, and every path you pass to a method is relative to `$base_path`. It has four entry points, and every method on them returns the same object, so calls chain. Each call reads the file, changes it and writes it back straight away, and only when something actually changed.
+
+### Written the way Drupal writes it
+
+Every file is saved with the same YAML settings Drupal uses for a config export, and every list a call changes is put in the order Drupal would give it: permissions and dependency names alphabetically, the module list by weight and then name, and a new `dependencies` key after `uuid`, `langcode` and `status`. So a later `drush config:export` does not re-sort what this library wrote, and you choose no positions yourself. These rules are copied from Drupal core, not loaded from it, so each file is checked before it is rewritten. The file on disk is taken to be exactly what your Drupal exported. If re-saving it unchanged would alter any byte, or a list the call is about to re-sort is not already in that order, your Drupal writes config differently from the copied rules. The call then throws a `DrupalFormatMismatchException` naming the file and the first difference, and leaves that file untouched:
+
+```text
+user.role.editor.yml: permissions are not in the order this library sorts them. Not writing the file.
+  exported: set page title, access content
+  would be: access content, set page title
+```
+
+A file the call does not need to change is never checked. A file you edited by hand, for example to add a comment, fails the check the same way; export it again from Drupal first.
+
+A file a call needs but cannot find throws a Symfony `ParseException`; an empty file is treated as having no data.
 
 ### Modules: `core.extension.yml`
 
@@ -105,28 +131,35 @@ The method names follow Drupal's terms, but they only change the file. A module 
 
 | Method | Effect |
 |---|---|
-| `enable($module, $after_module)` | Adds `$module` to the module list, with weight 0, right after `$after_module`. If `$after_module` is not in the list, it is appended at the end. Does nothing if `$module` is already there. The list is not re-sorted the way Drupal sorts it. |
+| `enable($module)` | Adds `$module` to the module list with weight 0, sorted into place. A module already listed keeps its weight. |
 | `disable($module)` | Takes `$module` off the module list. Its config files stay; remove them with `files()->delete()` if you need to. |
-| `addDependency($module, $after_module = NULL)` | Adds a module to `dependencies.module`, after `$after_module` or, with none, at the end. |
-| `removeDependency($module)` | Removes a module from `dependencies.module`. |
 
 ### Roles: `user.role.<role>.yml`
 
-`$fix->roles(['anonymous', 'authenticated'])` applies each call to every role listed. A role file is rewritten only when its data actually changes.
+`$fix->roles(['anonymous', 'authenticated'])` applies each call to every role listed.
 
 | Method | Effect |
 |---|---|
-| `addPermission($permission, $after_permission = NULL)` | Inserts after `$after_permission`, or appends when it is missing or not given. Skipped if the role already has it. |
+| `addPermission($permission)` | Adds the permission, sorted into place. Skipped if the role already has it. |
 | `removePermission($permission)` | Removes the permission. |
-| `addDependency($module, $after_module = NULL)` | Inserts into `dependencies.module` after `$after_module`. With no `$after_module` it goes **first**, unlike `modules()->addDependency()`, which appends. |
+| `addDependency($module)` | Adds the module to `dependencies.module`, sorted into place. |
+| `removeDependency($module)` | Removes the module dependency. When it was the last one, `dependencies` is left as `{  }`, as Drupal writes it. |
+
+### Any config entity: `config()`
+
+`$fix->config(['block.block.captcha', 'views.view.content'])` edits any config entity files, named without or with `.yml`. Use it to add or remove the module dependency of a block, a view, a field or anything else that records one.
+
+| Method | Effect |
+|---|---|
+| `addDependency($module)` | Adds the module to `dependencies.module`, sorted into place. |
 | `removeDependency($module)` | Removes the module dependency. |
 
 ### Files
 
 | Method | Effect |
 |---|---|
-| `restore($relative_path)` | Runs `git restore` on the path, so a file the export deleted or changed comes back as committed. Wildcards work, matched by git as a pathspec: `restore('monolog*.*')`. Throws a `RuntimeException` if git fails, for example when the path matches no file git knows. |
-| `delete($relative_path)` | Deletes the file if it exists. |
+| `restore($relative_path)` | Runs `git restore` on the path, so a file the export deleted or changed comes back as committed. Git runs in `$base_path`, so it works from any working directory. Wildcards work, matched by git as a pathspec: `restore('monolog*.*')`. Throws a `RuntimeException` if git fails, for example when the path matches no file git knows. |
+| `delete($relative_path)` | Deletes exactly that file if it exists, and does nothing if it does not. No wildcards. |
 
 ### A complete hook
 
@@ -140,10 +173,10 @@ use AKlump\Drupal\ConfigFixer\ConfigFixer;
 $fix = new ConfigFixer('./private/default/config/base');
 
 $fix->modules()
-  ->enable('honeypot', 'help')
-  ->enable('captcha', 'breakpoint')
-  ->enable('monolog', 'module_filter')
-  ->enable('monolog_conditional_mailer', 'monolog');
+  ->enable('honeypot')
+  ->enable('captcha')
+  ->enable('monolog')
+  ->enable('monolog_conditional_mailer');
 
 $fix->files()
   ->restore('honeypot.settings.yml')
@@ -151,11 +184,11 @@ $fix->files()
   ->restore('captcha.*');
 
 $fix->roles(['site_admin'])
-  ->addDependency('captcha', 'block')
-  ->addDependency('honeypot', 'captcha')
+  ->addDependency('captcha')
+  ->addDependency('honeypot')
   ->addPermission('administer CAPTCHA settings')
-  ->addPermission('administer honeypot', 'administer CAPTCHA settings')
-  ->addPermission('skip CAPTCHA', 'administer honeypot');
+  ->addPermission('administer honeypot')
+  ->addPermission('skip CAPTCHA');
 
 $fix->roles(['anonymous', 'authenticated'])
   ->removeDependency('environment_indicator')

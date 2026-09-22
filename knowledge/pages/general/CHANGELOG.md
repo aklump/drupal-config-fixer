@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.13] - 2026-09-22
+
 ### Added
 
 - Before rewriting a file, the library checks that the file as exported already matches the YAML format and sort order it writes. If not, it throws `DrupalFormatMismatchException` naming the file and the first difference, and leaves the file untouched, so a Drupal version that writes config differently cannot cause churn.
