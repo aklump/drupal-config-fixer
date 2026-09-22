@@ -6,6 +6,9 @@ use AKlump\Drupal\ConfigFixer\Helpers\InsertAfterArrayValue;
 
 class Permissions {
 
+  /** @var array */
+  private $data = [];
+
   /**
    * @param string $module
    * @param $after_module

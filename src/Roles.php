@@ -10,7 +10,8 @@ class Roles {
 
   use FileIOTrait;
 
-  private array $roles;
+  /** @var array */
+  private $roles;
 
   public function __construct(string $base_path, array $roles) {
     $this->setBasePath($base_path);
@@ -22,7 +23,7 @@ class Roles {
       $path = "user.role.$role.yml";
       $data = $this->load($path);
       if (empty($data['permissions'])) {
-        return $this;
+        continue;
       }
       $before = $data;
       $key = array_search($permission, $data['permissions']);
@@ -86,7 +87,7 @@ class Roles {
       $path = "user.role.$role.yml";
       $data = $this->load($path);
       if (empty($data['dependencies']['module'])) {
-        return $this;
+        continue;
       }
       $before = $data;
       $key = array_search($dependency, $data['dependencies']['module']);

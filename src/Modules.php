@@ -24,7 +24,14 @@ class Modules {
     $data = $this->load($path);
     $data['module'] = $data['module'] ?? [];
     if (!array_key_exists($insert_module, $data['module'])) {
-      $data['module'] = array_insert($data['module'], [$insert_module => 0], $after_module);
+      // array_insert() appends when $after_module is missing, but does so via
+      // `false++`, which is deprecated as of PHP 8.3.
+      if (array_key_exists($after_module, $data['module'])) {
+        $data['module'] = array_insert($data['module'], [$insert_module => 0], $after_module);
+      }
+      else {
+        $data['module'][$insert_module] = 0;
+      }
     }
     $this->save($path, $data);
 
@@ -56,6 +63,7 @@ class Modules {
   public function addDependency(string $module, ?string $after_module = NULL): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
+    $data['dependencies'] = $data['dependencies'] ?? [];
     $data['dependencies'] += ['module' => []];
     if (!in_array($module, $data['dependencies']['module'])) {
       (new InsertAfterArrayValue())($data['dependencies']['module'], $module, $after_module);
@@ -74,8 +82,7 @@ class Modules {
   public function removeDependency(string $module): self {
     $path = 'core.extension.yml';
     $data = $this->load($path);
-    $data['dependencies'] += ['module' => []];
-    $key = array_search($module, $data['dependencies']['module']);
+    $key = array_search($module, $data['dependencies']['module'] ?? []);
     if (FALSE !== $key) {
       unset($data['dependencies']['module'][$key]);
       $data['dependencies']['module'] = array_values($data['dependencies']['module']);

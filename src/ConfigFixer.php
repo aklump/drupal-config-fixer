@@ -4,7 +4,8 @@ namespace AKlump\Drupal\ConfigFixer;
 
 class ConfigFixer {
 
-  private string $basePath;
+  /** @var string */
+  private $basePath;
 
   public function __construct(string $base_path) {
     $this->setBasePath($base_path);

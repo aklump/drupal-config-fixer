@@ -7,7 +7,8 @@ use AKlump\Drupal\ConfigFixer\Helpers\SaveFile;
 
 trait FileIOTrait {
 
-  private string $basePath;
+  /** @var string */
+  private $basePath;
 
   public function getBasePath(): string {
     return $this->basePath;
