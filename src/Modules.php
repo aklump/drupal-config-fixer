@@ -2,92 +2,59 @@
 
 namespace AKlump\Drupal\ConfigFixer;
 
-use AKlump\Drupal\ConfigFixer\Helpers\InsertAfterArrayValue;
+use AKlump\Drupal\ConfigFixer\Helpers\SortModules;
 use AKlump\Drupal\ConfigFixer\Traits\FileIOTrait;
 
+/**
+ * Edit the module list in core.extension.yml.
+ */
 class Modules {
 
   use FileIOTrait;
+
+  const PATH = 'core.extension.yml';
 
   public function __construct(string $base_path) {
     $this->setBasePath($base_path);
   }
 
   /**
-   * @param $insert_module
-   * @param $after_module
+   * List $module as enabled, with weight 0.
+   *
+   * The list is sorted by weight and then name, as Drupal saves it. A module
+   * that is already listed keeps its weight, and the file is not rewritten.
+   *
+   * @param string $module
    *
    * @return $this
    */
-  public function enable(string $insert_module, string $after_module): self {
-    $path = 'core.extension.yml';
-    $data = $this->load($path);
-    $data['module'] = $data['module'] ?? [];
-    if (!array_key_exists($insert_module, $data['module'])) {
-      // array_insert() appends when $after_module is missing, but does so via
-      // `false++`, which is deprecated as of PHP 8.3.
-      if (array_key_exists($after_module, $data['module'])) {
-        $data['module'] = array_insert($data['module'], [$insert_module => 0], $after_module);
-      }
-      else {
-        $data['module'][$insert_module] = 0;
-      }
+  public function enable(string $module): self {
+    $data = $this->load(self::PATH);
+    if (array_key_exists($module, $data['module'] ?? [])) {
+      return $this;
     }
-    $this->save($path, $data);
+    $data['module'] = $data['module'] ?? [];
+    $data['module'][$module] = 0;
+    $data['module'] = (new SortModules())($data['module']);
+    $this->save(self::PATH, $data);
 
     return $this;
   }
 
   /**
-   * Disable $module from the config $data.
+   * Remove $module from the list; the file is not rewritten if it is absent.
    *
    * @param string $module
    *
    * @return $this
    */
   public function disable(string $module): self {
-    $path = 'core.extension.yml';
-    $data = $this->load($path);
+    $data = $this->load(self::PATH);
+    if (!array_key_exists($module, $data['module'] ?? [])) {
+      return $this;
+    }
     unset($data['module'][$module]);
-    $this->save($path, $data);
-
-    return $this;
-  }
-
-  /**
-   * @param string $module
-   * @param $after_module
-   *
-   * @return $this
-   */
-  public function addDependency(string $module, ?string $after_module = NULL): self {
-    $path = 'core.extension.yml';
-    $data = $this->load($path);
-    $data['dependencies'] = $data['dependencies'] ?? [];
-    $data['dependencies'] += ['module' => []];
-    if (!in_array($module, $data['dependencies']['module'])) {
-      (new InsertAfterArrayValue())($data['dependencies']['module'], $module, $after_module);
-    }
-    $this->save($path, $data);
-
-    return $this;
-  }
-
-  /**
-   * @param string $module
-   * @param $after_module
-   *
-   * @return $this
-   */
-  public function removeDependency(string $module): self {
-    $path = 'core.extension.yml';
-    $data = $this->load($path);
-    $key = array_search($module, $data['dependencies']['module'] ?? []);
-    if (FALSE !== $key) {
-      unset($data['dependencies']['module'][$key]);
-      $data['dependencies']['module'] = array_values($data['dependencies']['module']);
-    }
-    $this->save($path, $data);
+    $this->save(self::PATH, $data);
 
     return $this;
   }

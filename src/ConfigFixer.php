@@ -29,6 +29,14 @@ class ConfigFixer {
     return new Roles($this->getBasePath(), $roles);
   }
 
+  /**
+   * @param string[] $names
+   *   Config entity names, e.g. "block.block.foo" or "views.view.content".
+   */
+  public function config(array $names): ConfigEntities {
+    return new ConfigEntities($this->getBasePath(), $names);
+  }
+
   public function files(): Files {
     return new Files($this->getBasePath());
   }

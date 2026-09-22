@@ -8,11 +8,12 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \AKlump\Drupal\ConfigFixer\Roles
+ * @covers \AKlump\Drupal\ConfigFixer\ConfigEntities
  * @uses \AKlump\Drupal\ConfigFixer\Traits\FileIOTrait
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\LoadFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\AddDependency
- * @uses \AKlump\Drupal\ConfigFixer\Helpers\InsertAfterArrayValue
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\RemoveDependency
  */
 class RolesTest extends TestCase {
 
@@ -34,14 +35,6 @@ class RolesTest extends TestCase {
     return $this->readYaml("user.role.$role.yml");
   }
 
-  private function getRoleMTime(string $role): int {
-    $path = $this->getTempConfigDirectory() . "/user.role.$role.yml";
-    touch($path, 1000000000);
-    clearstatcache();
-
-    return filemtime($path);
-  }
-
   public function testConstructorSetsBasePath() {
     $this->assertSame('/foo', (new Roles('/foo', []))->getBasePath());
   }
@@ -54,15 +47,15 @@ class RolesTest extends TestCase {
     $this->assertSame($roles, $roles->removeDependency('foo'));
   }
 
-  public function testAddPermissionInsertsAfterPermission() {
-    $roles = $this->getRoles(['editor' => ['permissions' => ['a', 'c']]]);
-    $this->assertSame($roles, $roles->addPermission('b', 'a'));
-    $this->assertSame(['a', 'b', 'c'], $this->readRole('editor')['permissions']);
+  public function testAddPermissionSortsLikeDrupal() {
+    $roles = $this->getRoles(['editor' => ['permissions' => ['access content overview', 'set page title']]]);
+    $this->assertSame($roles, $roles->addPermission('skip CAPTCHA'));
+    $this->assertSame(['access content overview', 'set page title', 'skip CAPTCHA'], $this->readRole('editor')['permissions']);
   }
 
-  public function testAddPermissionWithoutAfterAppends() {
-    $this->getRoles(['editor' => ['permissions' => ['a']]])->addPermission('b');
-    $this->assertSame(['a', 'b'], $this->readRole('editor')['permissions']);
+  public function testAddPermissionIgnoresLegacyAfterArgument() {
+    $this->getRoles(['editor' => ['permissions' => ['a', 'c']]])->addPermission('b', 'c');
+    $this->assertSame(['a', 'b', 'c'], $this->readRole('editor')['permissions']);
   }
 
   public function testAddPermissionCreatesPermissionsKey() {
@@ -74,54 +67,29 @@ class RolesTest extends TestCase {
     $this->getRoles([
       'editor' => ['permissions' => ['a']],
       'admin' => ['permissions' => ['x']],
-    ])->addPermission('b', 'a');
+    ])->addPermission('b');
     $this->assertSame(['a', 'b'], $this->readRole('editor')['permissions']);
-    $this->assertSame(['x', 'b'], $this->readRole('admin')['permissions']);
+    $this->assertSame(['b', 'x'], $this->readRole('admin')['permissions']);
   }
 
-  public function testAddExistingPermissionDoesNotSave() {
-    $roles = $this->getRoles(['editor' => ['permissions' => ['a', 'b']]]);
-    $mtime = $this->getRoleMTime('editor');
-    $roles->addPermission('a', 'b');
-    clearstatcache();
-    $this->assertSame($mtime, filemtime($this->getTempConfigDirectory() . '/user.role.editor.yml'));
-    $this->assertSame(['a', 'b'], $this->readRole('editor')['permissions']);
+  public function testAddExistingPermissionDoesNotRewrite() {
+    $this->getRoles(['editor' => ['permissions' => ['a', 'b']]]);
+    $this->backdateFile('user.role.editor.yml');
+    (new Roles($this->getTempConfigDirectory(), ['editor']))->addPermission('a');
+    $this->assertFileNotRewritten('user.role.editor.yml');
   }
 
-  public function testAddPermissionChain() {
-    $this->getRoles(['site_admin' => ['permissions' => ['x']]])
-      ->addPermission('administer CAPTCHA settings')
-      ->addPermission('administer honeypot', 'administer CAPTCHA settings')
-      ->addPermission('bypass honeypot protection', 'administer honeypot');
-    $this->assertSame([
-      'x',
-      'administer CAPTCHA settings',
-      'administer honeypot',
-      'bypass honeypot protection',
-    ], $this->readRole('site_admin')['permissions']);
-  }
-
-  public function testRemovePermissionReindexes() {
+  public function testRemovePermission() {
     $roles = $this->getRoles(['editor' => ['permissions' => ['a', 'b', 'c']]]);
     $this->assertSame($roles, $roles->removePermission('b'));
     $this->assertSame(['a', 'c'], $this->readRole('editor')['permissions']);
   }
 
-  public function testRemoveMissingPermissionDoesNotSave() {
-    $roles = $this->getRoles(['editor' => ['permissions' => ['a']]]);
-    $mtime = $this->getRoleMTime('editor');
-    $roles->removePermission('b');
-    clearstatcache();
-    $this->assertSame($mtime, filemtime($this->getTempConfigDirectory() . '/user.role.editor.yml'));
-  }
-
-  public function testRemovePermissionAppliesToAllRoles() {
-    $this->getRoles([
-      'anonymous' => ['permissions' => ['a', 'b']],
-      'authenticated' => ['permissions' => ['b', 'c']],
-    ])->removePermission('b');
-    $this->assertSame(['a'], $this->readRole('anonymous')['permissions']);
-    $this->assertSame(['c'], $this->readRole('authenticated')['permissions']);
+  public function testRemoveMissingPermissionDoesNotRewrite() {
+    $this->getRoles(['editor' => ['permissions' => ['a']]]);
+    $this->backdateFile('user.role.editor.yml');
+    (new Roles($this->getTempConfigDirectory(), ['editor']))->removePermission('b');
+    $this->assertFileNotRewritten('user.role.editor.yml');
   }
 
   public function testRemovePermissionContinuesPastRoleWithoutPermissions() {
@@ -133,60 +101,26 @@ class RolesTest extends TestCase {
     $this->assertSame(['b'], $this->readRole('authenticated')['permissions']);
   }
 
-  public function testAddDependencyInsertsAfterModule() {
-    $roles = $this->getRoles(['editor' => ['dependencies' => ['module' => ['block', 'node']]]]);
-    $this->assertSame($roles, $roles->addDependency('captcha', 'block'));
+  public function testAddDependencyWritesRoleLikeDrupal() {
+    $this->getRoles(['editor' => [
+      'uuid' => 'abc',
+      'langcode' => 'en',
+      'status' => TRUE,
+      'id' => 'editor',
+      'label' => 'Editor',
+      'weight' => 2,
+      'is_admin' => FALSE,
+      'permissions' => ['access content overview'],
+    ]])->addDependency('captcha')->addPermission('skip CAPTCHA');
+    $this->assertSame(
+      "uuid: abc\nlangcode: en\nstatus: true\ndependencies:\n  module:\n    - captcha\nid: editor\nlabel: Editor\nweight: 2\nis_admin: false\npermissions:\n  - 'access content overview'\n  - 'skip CAPTCHA'\n",
+      file_get_contents($this->getTempConfigDirectory() . '/user.role.editor.yml')
+    );
+  }
+
+  public function testAddDependencyIgnoresLegacyAfterArgument() {
+    $this->getRoles(['editor' => ['dependencies' => ['module' => ['block', 'node']]]])->addDependency('captcha', 'node');
     $this->assertSame(['block', 'captcha', 'node'], $this->readRole('editor')['dependencies']['module']);
-  }
-
-  public function testAddDependencyWithoutAfterPrepends() {
-    $this->getRoles(['editor' => ['dependencies' => ['module' => ['block']]]])->addDependency('captcha');
-    $this->assertSame(['captcha', 'block'], $this->readRole('editor')['dependencies']['module']);
-  }
-
-  public function testAddDependencyCreatesDependencies() {
-    $this->getRoles(['editor' => ['id' => 'editor']])->addDependency('captcha');
-    $this->assertSame(['module' => ['captcha']], $this->readRole('editor')['dependencies']);
-  }
-
-  public function testAddExistingDependencyDoesNotSave() {
-    $roles = $this->getRoles(['editor' => ['dependencies' => ['module' => ['captcha']]]]);
-    $mtime = $this->getRoleMTime('editor');
-    $roles->addDependency('captcha', 'block');
-    clearstatcache();
-    $this->assertSame($mtime, filemtime($this->getTempConfigDirectory() . '/user.role.editor.yml'));
-  }
-
-  public function testAddDependencyAppliesToAllRoles() {
-    $this->getRoles([
-      'editor' => ['dependencies' => ['module' => ['block']]],
-      'admin' => ['dependencies' => ['module' => ['node']]],
-    ])->addDependency('captcha', 'block');
-    $this->assertSame(['block', 'captcha'], $this->readRole('editor')['dependencies']['module']);
-    $this->assertSame(['node', 'captcha'], $this->readRole('admin')['dependencies']['module']);
-  }
-
-  public function testRemoveDependencyReindexes() {
-    $roles = $this->getRoles(['editor' => ['dependencies' => ['module' => ['a', 'b', 'c']]]]);
-    $this->assertSame($roles, $roles->removeDependency('b'));
-    $this->assertSame(['a', 'c'], $this->readRole('editor')['dependencies']['module']);
-  }
-
-  public function testRemoveMissingDependencyDoesNotSave() {
-    $roles = $this->getRoles(['editor' => ['dependencies' => ['module' => ['a']]]]);
-    $mtime = $this->getRoleMTime('editor');
-    $roles->removeDependency('b');
-    clearstatcache();
-    $this->assertSame($mtime, filemtime($this->getTempConfigDirectory() . '/user.role.editor.yml'));
-  }
-
-  public function testRemoveDependencyAppliesToAllRoles() {
-    $this->getRoles([
-      'anonymous' => ['dependencies' => ['module' => ['a', 'b']]],
-      'authenticated' => ['dependencies' => ['module' => ['b']]],
-    ])->removeDependency('b');
-    $this->assertSame(['a'], $this->readRole('anonymous')['dependencies']['module']);
-    $this->assertSame([], $this->readRole('authenticated')['dependencies']['module']);
   }
 
   public function testRemoveDependencyContinuesPastRoleWithoutDependencies() {

@@ -7,67 +7,65 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \AKlump\Drupal\ConfigFixer\Helpers\AddDependency
- * @uses \AKlump\Drupal\ConfigFixer\Helpers\InsertAfterArrayValue
  */
 class AddDependencyTest extends TestCase {
 
   public function dataFortestInvokeProvider() {
     $tests = [];
+    // Names are sorted.
     $tests[] = [
-      ['dependencies' => ['module' => ['foo', 'bar']]],
+      ['dependencies' => ['module' => ['bar', 'foo']]],
       ['dependencies' => ['module' => ['foo']]],
       'bar',
-      'foo',
       'module',
     ];
-    $tests[] = [
-      ['dependencies' => ['module' => ['foo']]],
-      [],
-      'foo',
-      NULL,
-      'module',
-    ];
-    $tests[] = [
-      ['dependencies' => ['module' => ['foo', 'bar']]],
-      ['dependencies' => ['module' => ['bar']]],
-      'foo',
-      NULL,
-      'module',
-    ];
-    $tests[] = [
-      ['dependencies' => ['lorem' => ['bar']]],
-      [],
-      'bar',
-      NULL,
-      'lorem',
-    ];
-    $tests[] = [
-      ['dependencies' => ['module' => ['foo', 'baz', 'bar']]],
-      ['dependencies' => ['module' => ['foo', 'bar']]],
-      'baz',
-      'foo',
-      'module',
-    ];
+    // Already present: unchanged.
     $tests[] = [
       ['dependencies' => ['module' => ['foo', 'bar']]],
       ['dependencies' => ['module' => ['foo', 'bar']]],
       'foo',
-      'bar',
       'module',
     ];
+    // No dependencies key and no key it follows: it goes first.
     $tests[] = [
-      ['dependencies' => ['module' => ['foo', 'bar']]],
-      ['dependencies' => ['module' => ['foo']]],
-      'bar',
-      'missing',
-      'module',
-    ];
-    $tests[] = [
-      ['id' => 'editor', 'dependencies' => ['config' => ['x'], 'module' => ['foo']]],
-      ['id' => 'editor', 'dependencies' => ['config' => ['x']]],
+      ['dependencies' => ['module' => ['foo']], 'id' => 'editor'],
+      ['id' => 'editor'],
       'foo',
-      NULL,
       'module',
+    ];
+    // A new dependencies key goes after uuid, langcode and status.
+    $tests[] = [
+      [
+        'uuid' => 'x',
+        'langcode' => 'en',
+        'status' => TRUE,
+        'dependencies' => ['module' => ['foo']],
+        'id' => 'editor',
+        'permissions' => [],
+      ],
+      [
+        'uuid' => 'x',
+        'langcode' => 'en',
+        'status' => TRUE,
+        'id' => 'editor',
+        'permissions' => [],
+      ],
+      'foo',
+      'module',
+    ];
+    // Type keys are in schema order.
+    $tests[] = [
+      ['dependencies' => ['config' => ['a'], 'module' => ['foo'], 'theme' => ['t']]],
+      ['dependencies' => ['theme' => ['t'], 'config' => ['a']]],
+      'foo',
+      'module',
+    ];
+    // An empty dependencies mapping.
+    $tests[] = [
+      ['langcode' => 'en', 'dependencies' => ['theme' => ['olivero']]],
+      ['langcode' => 'en', 'dependencies' => []],
+      'olivero',
+      'theme',
     ];
 
     return $tests;
@@ -76,8 +74,13 @@ class AddDependencyTest extends TestCase {
   /**
    * @dataProvider dataFortestInvokeProvider
    */
-  public function testInvoke($expected, $data, $dependency, $after_item, $type) {
-    $result = (new AddDependency())($data, $dependency, $after_item, $type);
+  public function testInvoke($expected, $data, $dependency, $type) {
+    $result = (new AddDependency())($data, $dependency, $type);
     $this->assertSame($expected, $result);
   }
+
+  public function testTypeDefaultsToModule() {
+    $this->assertSame(['dependencies' => ['module' => ['foo']]], (new AddDependency())([], 'foo'));
+  }
+
 }

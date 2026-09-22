@@ -17,6 +17,7 @@ class Files {
    *
    * @param string $relative_path
    *   May contain wildcards, e.g. "monolog*.*"; git matches them as a pathspec.
+   *   Git runs in the base path, so the current directory does not matter.
    *
    * @return $this
    *
@@ -24,10 +25,9 @@ class Files {
    *   If git fails, e.g. the path matches no file known to git.
    */
   public function restore(string $relative_path): self {
-    $path = $this->getBasePath() . "/$relative_path";
-    exec(sprintf('git restore -- %s 2>&1', escapeshellarg($path)), $output, $exit_code);
+    exec(sprintf('git -C %s restore -- %s 2>&1', escapeshellarg($this->getBasePath()), escapeshellarg($relative_path)), $output, $exit_code);
     if ($exit_code !== 0) {
-      throw new \RuntimeException(sprintf('Could not restore "%s": %s', $path, implode(PHP_EOL, $output)));
+      throw new \RuntimeException(sprintf('Could not restore "%s/%s": %s', $this->getBasePath(), $relative_path, implode(PHP_EOL, $output)));
     }
 
     return $this;

@@ -99,6 +99,15 @@ class FilesTest extends TestCase {
     $this->assertStringEqualsFile("$base/foo.yml", 'foo: bar');
   }
 
+  public function testRestoreWorksFromOutsideTheRepository() {
+    $base = $this->initGitRepository(['foo.yml' => 'foo: bar']);
+    unlink("$base/foo.yml");
+    $this->originalWorkingDirectory = getcwd();
+    chdir('/');
+    (new Files($base))->restore('foo.yml');
+    $this->assertStringEqualsFile("$base/foo.yml", 'foo: bar');
+  }
+
   public function testRestoreThrowsWhenGitFails() {
     $base = $this->initGitRepository(['foo.yml' => 'foo: bar']);
     $this->expectException(\RuntimeException::class);
@@ -132,9 +141,6 @@ class FilesTest extends TestCase {
     exec("$git init -q && $git add -A && $git -c user.name=test -c user.email=test@example.com -c commit.gpgsign=false commit -q -m init", $output, $exit_code);
     $this->assertSame(0, $exit_code, 'Could not create the git fixture.');
 
-    // Files::restore() runs git from the process's working directory.
-    $this->originalWorkingDirectory = getcwd();
-    chdir($base);
 
     return $base;
   }

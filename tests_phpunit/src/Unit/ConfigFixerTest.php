@@ -2,6 +2,7 @@
 
 namespace AKlump\DrupalConfigFixer\Tests\Unit;
 
+use AKlump\Drupal\ConfigFixer\ConfigEntities;
 use AKlump\Drupal\ConfigFixer\ConfigFixer;
 use AKlump\Drupal\ConfigFixer\Files;
 use AKlump\Drupal\ConfigFixer\Modules;
@@ -10,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \AKlump\Drupal\ConfigFixer\ConfigFixer
+ * @uses \AKlump\Drupal\ConfigFixer\ConfigEntities
  * @uses \AKlump\Drupal\ConfigFixer\Files
  * @uses \AKlump\Drupal\ConfigFixer\Modules
  * @uses \AKlump\Drupal\ConfigFixer\Roles
@@ -38,6 +40,12 @@ class ConfigFixerTest extends TestCase {
     $roles = (new ConfigFixer('/foo'))->roles(['editor']);
     $this->assertInstanceOf(Roles::class, $roles);
     $this->assertSame('/foo', $roles->getBasePath());
+  }
+
+  public function testConfigReturnsConfigEntitiesWithBasePath() {
+    $config = (new ConfigFixer('/foo'))->config(['block.block.a']);
+    $this->assertInstanceOf(ConfigEntities::class, $config);
+    $this->assertSame('/foo', $config->getBasePath());
   }
 
   public function testFilesReturnsFilesWithBasePath() {

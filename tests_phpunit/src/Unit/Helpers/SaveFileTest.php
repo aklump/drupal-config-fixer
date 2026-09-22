@@ -13,18 +13,29 @@ class SaveFileTest extends TestCase {
 
   use TempConfigDirectoryTrait;
 
-  public function testInvokeWritesYamlWithTwoSpaceIndent() {
+  private function save(array $data): string {
     $path = $this->getTempConfigDirectory() . '/foo.yml';
-    (new SaveFile())($path, [
-      'dependencies' => ['module' => ['foo', 'bar']],
-    ]);
-    $this->assertSame("dependencies:\n  module:\n    - foo\n    - bar\n", file_get_contents($path));
+    (new SaveFile())($path, $data);
+
+    return file_get_contents($path);
   }
 
-  public function testInvokeInlinesBeyondFourLevels() {
-    $path = $this->getTempConfigDirectory() . '/foo.yml';
-    (new SaveFile())($path, ['a' => ['b' => ['c' => ['d' => ['e' => 1]]]]]);
-    $this->assertSame("a:\n  b:\n    c:\n      d: { e: 1 }\n", file_get_contents($path));
+  public function testInvokeWritesYamlWithTwoSpaceIndent() {
+    $this->assertSame("dependencies:\n  module:\n    - foo\n    - bar\n", $this->save([
+      'dependencies' => ['module' => ['foo', 'bar']],
+    ]));
+  }
+
+  public function testInvokeNeverInlinesNestedData() {
+    $this->assertSame("a:\n  b:\n    c:\n      d:\n        e: 1\n", $this->save(['a' => ['b' => ['c' => ['d' => ['e' => 1]]]]]));
+  }
+
+  public function testInvokeWritesEmptyMappingLikeDrupal() {
+    $this->assertSame("dependencies: {  }\n", $this->save(['dependencies' => []]));
+  }
+
+  public function testInvokeWritesMultiLineStringAsLiteralBlock() {
+    $this->assertSame("body: |-\n  line one\n  line two", $this->save(['body' => "line one\nline two"]));
   }
 
   public function testInvokeOverwritesExistingFile() {

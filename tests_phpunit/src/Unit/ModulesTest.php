@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Traits\FileIOTrait
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\LoadFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
- * @uses \AKlump\Drupal\ConfigFixer\Helpers\InsertAfterArrayValue
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\SortModules
  */
 class ModulesTest extends TestCase {
 
@@ -23,101 +23,64 @@ class ModulesTest extends TestCase {
     return new Modules($this->getTempConfigDirectory());
   }
 
+  private function readModules(): array {
+    return $this->readYaml('core.extension.yml')['module'];
+  }
+
   public function testConstructorSetsBasePath() {
     $this->assertSame('/foo', (new Modules('/foo'))->getBasePath());
   }
 
-  public function testEnableInsertsAfterModule() {
-    $modules = $this->getModules(['module' => ['foo' => 0, 'bar' => 0]]);
-    $this->assertSame($modules, $modules->enable('baz', 'foo'));
-    $this->assertSame(['foo', 'baz', 'bar'], array_keys($this->readYaml('core.extension.yml')['module']));
-    $this->assertSame(0, $this->readYaml('core.extension.yml')['module']['baz']);
+  public function testEnableSortsLikeDrupal() {
+    $modules = $this->getModules(['module' => ['views' => -10, 'help' => 0, 'node' => 0, 'standard' => 1000]]);
+    $this->assertSame($modules, $modules->enable('block'));
+    $this->assertSame(['views' => -10, 'block' => 0, 'help' => 0, 'node' => 0, 'standard' => 1000], $this->readModules());
   }
 
-  public function testEnableAfterMissingModuleAppends() {
-    $this->getModules(['module' => ['foo' => 0]])->enable('baz', 'missing');
-    $this->assertSame(['foo', 'baz'], array_keys($this->readYaml('core.extension.yml')['module']));
+  public function testEnableIgnoresLegacyAfterArgument() {
+    $this->getModules(['module' => ['help' => 0, 'node' => 0]])->enable('block', 'node');
+    $this->assertSame(['block', 'help', 'node'], array_keys($this->readModules()));
   }
 
   public function testEnableWithoutModuleKeyCreatesIt() {
-    $this->getModules(['theme' => ['olivero' => 0]])->enable('foo', 'bar');
+    $this->getModules(['theme' => ['olivero' => 0]])->enable('foo');
     $data = $this->readYaml('core.extension.yml');
     $this->assertSame(['foo' => 0], $data['module']);
     $this->assertSame(['olivero' => 0], $data['theme']);
   }
 
-  public function testEnableAlreadyEnabledModuleKeepsPositionAndWeight() {
-    $this->getModules(['module' => ['foo' => 0, 'bar' => 5]])->enable('bar', 'missing');
-    $this->assertSame(['foo' => 0, 'bar' => 5], $this->readYaml('core.extension.yml')['module']);
+  public function testEnableAlreadyEnabledKeepsWeightAndDoesNotRewrite() {
+    $this->getModules(['module' => ['foo' => 0, 'bar' => 5]]);
+    $this->backdateFile('core.extension.yml');
+    (new Modules($this->getTempConfigDirectory()))->enable('bar');
+    $this->assertFileNotRewritten('core.extension.yml');
+    $this->assertSame(['foo' => 0, 'bar' => 5], $this->readModules());
   }
 
   public function testEnableIsChainable() {
     $this->getModules(['module' => ['help' => 0]])
-      ->enable('captcha', 'help')
-      ->enable('honeypot', 'captcha');
-    $this->assertSame(['help', 'captcha', 'honeypot'], array_keys($this->readYaml('core.extension.yml')['module']));
+      ->enable('honeypot')
+      ->enable('captcha');
+    $this->assertSame(['captcha', 'help', 'honeypot'], array_keys($this->readModules()));
   }
 
   public function testDisableRemovesModule() {
     $modules = $this->getModules(['module' => ['foo' => 0, 'bar' => 0]]);
     $this->assertSame($modules, $modules->disable('foo'));
-    $this->assertSame(['bar' => 0], $this->readYaml('core.extension.yml')['module']);
+    $this->assertSame(['bar' => 0], $this->readModules());
   }
 
-  public function testDisableMissingModuleLeavesOthers() {
-    $this->getModules(['module' => ['foo' => 0]])->disable('bar');
-    $this->assertSame(['foo' => 0], $this->readYaml('core.extension.yml')['module']);
+  public function testDisableMissingModuleDoesNotRewrite() {
+    $this->getModules(['module' => ['foo' => 0]]);
+    $this->backdateFile('core.extension.yml');
+    (new Modules($this->getTempConfigDirectory()))->disable('bar');
+    $this->assertFileNotRewritten('core.extension.yml');
   }
 
   public function testDisableOnEmptyFileDoesNotFail() {
     file_put_contents($this->getTempConfigDirectory() . '/core.extension.yml', '');
     (new Modules($this->getTempConfigDirectory()))->disable('foo');
-    $this->assertSame([], $this->readYaml('core.extension.yml'));
-  }
-
-  public function testAddDependencyInsertsAfterModule() {
-    $modules = $this->getModules(['dependencies' => ['module' => ['foo', 'bar']]]);
-    $this->assertSame($modules, $modules->addDependency('baz', 'foo'));
-    $this->assertSame(['foo', 'baz', 'bar'], $this->readYaml('core.extension.yml')['dependencies']['module']);
-  }
-
-  public function testAddDependencyWithoutAfterAppends() {
-    $this->getModules(['dependencies' => ['module' => ['foo']]])->addDependency('bar');
-    $this->assertSame(['foo', 'bar'], $this->readYaml('core.extension.yml')['dependencies']['module']);
-  }
-
-  public function testAddDependencyExistingIsNotDuplicated() {
-    $this->getModules(['dependencies' => ['module' => ['foo', 'bar']]])->addDependency('foo', 'bar');
-    $this->assertSame(['foo', 'bar'], $this->readYaml('core.extension.yml')['dependencies']['module']);
-  }
-
-  public function testAddDependencyCreatesModuleKey() {
-    $this->getModules(['dependencies' => ['theme' => ['olivero']]])->addDependency('foo');
-    $this->assertSame([
-      'theme' => ['olivero'],
-      'module' => ['foo'],
-    ], $this->readYaml('core.extension.yml')['dependencies']);
-  }
-
-  public function testAddDependencyCreatesDependenciesKey() {
-    $this->getModules(['module' => ['foo' => 0]])->addDependency('foo');
-    $this->assertSame(['module' => ['foo']], $this->readYaml('core.extension.yml')['dependencies']);
-  }
-
-  public function testRemoveDependencyReindexes() {
-    $modules = $this->getModules(['dependencies' => ['module' => ['foo', 'bar', 'baz']]]);
-    $this->assertSame($modules, $modules->removeDependency('bar'));
-    $this->assertSame(['foo', 'baz'], $this->readYaml('core.extension.yml')['dependencies']['module']);
-  }
-
-  public function testRemoveDependencyMissingLeavesOthers() {
-    $this->getModules(['dependencies' => ['module' => ['foo']]])->removeDependency('bar');
-    $this->assertSame(['foo'], $this->readYaml('core.extension.yml')['dependencies']['module']);
-  }
-
-  public function testRemoveDependencyWithoutDependenciesKey() {
-    $this->getModules(['module' => ['foo' => 0]])->removeDependency('foo');
-    $this->assertSame(['module' => ['foo' => 0]], $this->readYaml('core.extension.yml'));
+    $this->assertSame('', file_get_contents($this->getTempConfigDirectory() . '/core.extension.yml'));
   }
 
 }

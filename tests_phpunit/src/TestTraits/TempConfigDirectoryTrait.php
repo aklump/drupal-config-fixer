@@ -33,6 +33,19 @@ trait TempConfigDirectoryTrait {
     return Yaml::parseFile($this->getTempConfigDirectory() . "/$relative_path");
   }
 
+  /**
+   * Backdate a file so a later rewrite shows up as a new modification time.
+   */
+  protected function backdateFile(string $relative_path): void {
+    touch($this->getTempConfigDirectory() . "/$relative_path", 1000000000);
+    clearstatcache();
+  }
+
+  protected function assertFileNotRewritten(string $relative_path): void {
+    clearstatcache();
+    $this->assertSame(1000000000, filemtime($this->getTempConfigDirectory() . "/$relative_path"), "$relative_path was rewritten.");
+  }
+
   protected function tearDown(): void {
     if ($this->tempConfigDirectory && is_dir($this->tempConfigDirectory)) {
       exec(sprintf('rm -rf %s', escapeshellarg($this->tempConfigDirectory)));
