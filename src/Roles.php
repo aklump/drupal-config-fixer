@@ -3,6 +3,7 @@
 namespace AKlump\Drupal\ConfigFixer;
 
 use AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder;
+use AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument;
 
 /**
  * Edit one or more user.role.<role>.yml files.
@@ -30,6 +31,10 @@ class Roles extends ConfigEntities {
    * @return $this
    */
   public function addPermission(string $permission): self {
+    if (func_num_args() > 1) {
+      (new WarnIgnoredAfterArgument())(static::class . '::' . __FUNCTION__);
+    }
+
     return $this->alter(function (array $data) use ($permission) {
       $permissions = $data['permissions'] ?? [];
       if (!in_array($permission, $permissions)) {

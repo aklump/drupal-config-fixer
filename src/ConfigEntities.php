@@ -5,6 +5,7 @@ namespace AKlump\Drupal\ConfigFixer;
 use AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException;
 use AKlump\Drupal\ConfigFixer\Helpers\AddDependency;
 use AKlump\Drupal\ConfigFixer\Helpers\RemoveDependency;
+use AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument;
 use AKlump\Drupal\ConfigFixer\Traits\FileIOTrait;
 
 /**
@@ -37,6 +38,10 @@ class ConfigEntities {
    * @return $this
    */
   public function addDependency(string $module): self {
+    if (func_num_args() > 1) {
+      (new WarnIgnoredAfterArgument())(static::class . '::' . __FUNCTION__);
+    }
+
     return $this->alter(function (array $data) use ($module) {
       return (new AddDependency())($data, $module, 'module');
     });

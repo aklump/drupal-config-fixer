@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Files are written the way Drupal writes a config export: nothing is inlined, and multi-line strings are literal blocks. Lists a call changes are sorted as Drupal sorts them (permissions and dependency names alphabetically, the module list by weight then name), and a new `dependencies` key goes after `uuid`, `langcode` and `status`. A later `drush config:export` no longer re-sorts what this library wrote.
-- The "after" arguments are gone: `Modules::enable($module)`, `Roles::addPermission($permission)` and `Roles::addDependency($module)`. PHP ignores the extra argument, so existing calls keep working; the position now comes from Drupal's sort order.
+- The "after" arguments are gone: `Modules::enable($module)`, `Roles::addPermission($permission)` and `Roles::addDependency($module)`. Existing calls keep working, and the position now comes from Drupal's sort order; passing the old argument triggers an `E_USER_WARNING` that names the line to remove it from.
 - `Modules::enable()` and `Modules::disable()` no longer rewrite `core.extension.yml` when nothing changes.
 - `Files::restore()` runs git in the base path, so it works from any working directory.
 - Removing the last dependency of a config entity leaves `dependencies: {  }`, as Drupal writes it.

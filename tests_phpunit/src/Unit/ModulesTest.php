@@ -3,6 +3,7 @@
 namespace AKlump\DrupalConfigFixer\Tests\Unit;
 
 use AKlump\Drupal\ConfigFixer\Modules;
+use AKlump\DrupalConfigFixer\Tests\TestTraits\CaptureWarningsTrait;
 use AKlump\DrupalConfigFixer\Tests\TestTraits\TempConfigDirectoryTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -15,9 +16,11 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument
  */
 class ModulesTest extends TestCase {
 
+  use CaptureWarningsTrait;
   use TempConfigDirectoryTrait;
 
   private function getModules(array $core_extension): Modules {
@@ -40,9 +43,21 @@ class ModulesTest extends TestCase {
     $this->assertSame(['views' => -10, 'block' => 0, 'help' => 0, 'node' => 0, 'standard' => 1000], $this->readModules());
   }
 
-  public function testEnableIgnoresLegacyAfterArgument() {
-    $this->getModules(['module' => ['help' => 0, 'node' => 0]])->enable('block', 'node');
+  public function testEnableWarnsAboutAndIgnoresLegacyAfterArgument() {
+    $modules = $this->getModules(['module' => ['help' => 0, 'node' => 0]]);
+    $warnings = $this->captureWarnings(function () use ($modules) {
+      $modules->enable('block', 'node');
+    });
+    $this->assertCount(1, $warnings);
+    $this->assertStringStartsWith('AKlump\Drupal\ConfigFixer\Modules::enable(): the second ("after") argument is ignored', $warnings[0]);
     $this->assertSame(['block', 'help', 'node'], array_keys($this->readModules()));
+  }
+
+  public function testEnableWithOneArgumentDoesNotWarn() {
+    $modules = $this->getModules(['module' => ['help' => 0]]);
+    $this->assertSame([], $this->captureWarnings(function () use ($modules) {
+      $modules->enable('block');
+    }));
   }
 
   public function testEnableWithoutModuleKeyCreatesIt() {

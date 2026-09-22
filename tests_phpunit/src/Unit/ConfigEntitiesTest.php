@@ -3,6 +3,7 @@
 namespace AKlump\DrupalConfigFixer\Tests\Unit;
 
 use AKlump\Drupal\ConfigFixer\ConfigEntities;
+use AKlump\DrupalConfigFixer\Tests\TestTraits\CaptureWarningsTrait;
 use AKlump\DrupalConfigFixer\Tests\TestTraits\TempConfigDirectoryTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -16,9 +17,11 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument
  */
 class ConfigEntitiesTest extends TestCase {
 
+  use CaptureWarningsTrait;
   use TempConfigDirectoryTrait;
 
   private function getConfig(array $files): ConfigEntities {
@@ -59,6 +62,23 @@ class ConfigEntitiesTest extends TestCase {
     ])->addDependency('captcha');
     $this->assertSame(['captcha'], $this->readYaml('block.block.a.yml')['dependencies']['module']);
     $this->assertSame(['captcha', 'node'], $this->readYaml('block.block.b.yml')['dependencies']['module']);
+  }
+
+  public function testAddDependencyWarnsAboutAndIgnoresLegacyAfterArgument() {
+    $config = $this->getConfig(['block.block.a' => ['dependencies' => ['module' => ['block', 'node']]]]);
+    $warnings = $this->captureWarnings(function () use ($config) {
+      $config->addDependency('captcha', 'node');
+    });
+    $this->assertCount(1, $warnings);
+    $this->assertStringStartsWith('AKlump\Drupal\ConfigFixer\ConfigEntities::addDependency(): the second ("after") argument is ignored', $warnings[0]);
+    $this->assertSame(['block', 'captcha', 'node'], $this->readYaml('block.block.a.yml')['dependencies']['module']);
+  }
+
+  public function testAddDependencyWithOneArgumentDoesNotWarn() {
+    $config = $this->getConfig(['block.block.a' => ['id' => 'a']]);
+    $this->assertSame([], $this->captureWarnings(function () use ($config) {
+      $config->addDependency('captcha');
+    }));
   }
 
   public function testAddExistingDependencyDoesNotRewrite() {

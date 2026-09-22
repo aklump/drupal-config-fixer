@@ -3,6 +3,7 @@
 namespace AKlump\DrupalConfigFixer\Tests\Unit;
 
 use AKlump\Drupal\ConfigFixer\Roles;
+use AKlump\DrupalConfigFixer\Tests\TestTraits\CaptureWarningsTrait;
 use AKlump\DrupalConfigFixer\Tests\TestTraits\TempConfigDirectoryTrait;
 use PHPUnit\Framework\TestCase;
 
@@ -17,9 +18,11 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument
  */
 class RolesTest extends TestCase {
 
+  use CaptureWarningsTrait;
   use TempConfigDirectoryTrait;
 
   /**
@@ -56,9 +59,21 @@ class RolesTest extends TestCase {
     $this->assertSame(['access content overview', 'set page title', 'skip CAPTCHA'], $this->readRole('editor')['permissions']);
   }
 
-  public function testAddPermissionIgnoresLegacyAfterArgument() {
-    $this->getRoles(['editor' => ['permissions' => ['a', 'c']]])->addPermission('b', 'c');
+  public function testAddPermissionWarnsAboutAndIgnoresLegacyAfterArgument() {
+    $roles = $this->getRoles(['editor' => ['permissions' => ['a', 'c']]]);
+    $warnings = $this->captureWarnings(function () use ($roles) {
+      $roles->addPermission('b', 'c');
+    });
+    $this->assertCount(1, $warnings);
+    $this->assertStringStartsWith('AKlump\Drupal\ConfigFixer\Roles::addPermission(): the second ("after") argument is ignored', $warnings[0]);
     $this->assertSame(['a', 'b', 'c'], $this->readRole('editor')['permissions']);
+  }
+
+  public function testAddPermissionWithOneArgumentDoesNotWarn() {
+    $roles = $this->getRoles(['editor' => ['permissions' => ['a']]]);
+    $this->assertSame([], $this->captureWarnings(function () use ($roles) {
+      $roles->addPermission('b');
+    }));
   }
 
   public function testAddPermissionCreatesPermissionsKey() {
@@ -121,8 +136,13 @@ class RolesTest extends TestCase {
     );
   }
 
-  public function testAddDependencyIgnoresLegacyAfterArgument() {
-    $this->getRoles(['editor' => ['dependencies' => ['module' => ['block', 'node']]]])->addDependency('captcha', 'node');
+  public function testAddDependencyWarnsAboutAndIgnoresLegacyAfterArgument() {
+    $roles = $this->getRoles(['editor' => ['dependencies' => ['module' => ['block', 'node']]]]);
+    $warnings = $this->captureWarnings(function () use ($roles) {
+      $roles->addDependency('captcha', 'node');
+    });
+    $this->assertCount(1, $warnings);
+    $this->assertStringStartsWith('AKlump\Drupal\ConfigFixer\Roles::addDependency(): the second ("after") argument is ignored', $warnings[0]);
     $this->assertSame(['block', 'captcha', 'node'], $this->readRole('editor')['dependencies']['module']);
   }
 

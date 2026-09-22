@@ -4,6 +4,7 @@ namespace AKlump\Drupal\ConfigFixer;
 
 use AKlump\Drupal\ConfigFixer\Helpers\SortModules;
 use AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder;
+use AKlump\Drupal\ConfigFixer\Helpers\WarnIgnoredAfterArgument;
 use AKlump\Drupal\ConfigFixer\Traits\FileIOTrait;
 
 /**
@@ -33,6 +34,10 @@ class Modules {
    *   If the exported list is not in the order this library sorts it.
    */
   public function enable(string $module): self {
+    if (func_num_args() > 1) {
+      (new WarnIgnoredAfterArgument())(static::class . '::' . __FUNCTION__);
+    }
+
     $data = $this->load(self::PATH);
     if (array_key_exists($module, $data['module'] ?? [])) {
       return $this;
