@@ -14,6 +14,7 @@ VENDOR_PATH="../vendor/"
 # ========= Validation =========
 [[ -z "$INSTALL_PATH" ]] && echo "❌️ \$INSTALL_PATH cannot be empty" && exit 3
 INSTALL_PATH="$(cd "$__DIR__/$INSTALL_PATH" && pwd)"
+[[ -z "$INSTALL_PATH" ]] && echo "❌️ \$INSTALL_PATH does not exist; check the \$INSTALL_PATH variable in $0" && exit 3
 CONFIG="$__DIR__/$CONFIG"
 VENDOR_PATH="$(cd "$__DIR__/$VENDOR_PATH" && pwd)"
 [[ -z "$VENDOR_PATH" ]] && echo "❌️ \$VENDOR_PATH cannot be empty" && exit 4
