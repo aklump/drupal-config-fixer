@@ -13,6 +13,9 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\AddDependency
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\RemoveDependency
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class ConfigEntitiesTest extends TestCase {
 

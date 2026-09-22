@@ -9,6 +9,9 @@ use PHPUnit\Framework\TestCase;
 /**
  * @covers \AKlump\Drupal\ConfigFixer\Files
  * @uses \AKlump\Drupal\ConfigFixer\Traits\FileIOTrait
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class FilesTest extends TestCase {
 

@@ -2,6 +2,8 @@
 
 namespace AKlump\Drupal\ConfigFixer;
 
+use AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder;
+
 /**
  * Edit one or more user.role.<role>.yml files.
  */
@@ -31,6 +33,9 @@ class Roles extends ConfigEntities {
     return $this->alter(function (array $data) use ($permission) {
       $permissions = $data['permissions'] ?? [];
       if (!in_array($permission, $permissions)) {
+        $sorted = $permissions;
+        sort($sorted);
+        (new VerifyOrder())('permissions', $permissions, $sorted);
         $permissions[] = $permission;
         sort($permissions);
         $data['permissions'] = $permissions;

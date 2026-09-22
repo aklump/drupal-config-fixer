@@ -2,6 +2,7 @@
 
 namespace AKlump\DrupalConfigFixer\Tests\TestTraits;
 
+use AKlump\Drupal\ConfigFixer\Helpers\DumpYaml;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -24,7 +25,7 @@ trait TempConfigDirectoryTrait {
 
   protected function writeYaml(string $relative_path, array $data): string {
     $path = $this->getTempConfigDirectory() . "/$relative_path";
-    file_put_contents($path, Yaml::dump($data, 4, 2));
+    file_put_contents($path, (new DumpYaml())($data));
 
     return $path;
   }

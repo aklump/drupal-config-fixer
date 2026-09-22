@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Before rewriting a file, the library checks that the file as exported already matches the YAML format and sort order it writes. If not, it throws `DrupalFormatMismatchException` naming the file and the first difference, and leaves the file untouched, so a Drupal version that writes config differently cannot cause churn.
 - `ConfigFixer::config(array $names)` edits any config entity file (a block, a view, a field...): `addDependency()` and `removeDependency()` for module dependencies.
 
 ### Changed
@@ -25,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- The `mcaskill/php-array-insert` dependency, no longer used.
 - `Modules::addDependency()` and `Modules::removeDependency()`: they wrote a `dependencies` key into `core.extension.yml`, which Drupal does not use. Use `$fix->config([...])->addDependency()` on the config entity that needs the module.
 - `Helpers\AddDependency` no longer takes an "after" argument: its signature is now `($data, $dependency, $type = 'module')`.
 

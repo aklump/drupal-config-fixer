@@ -10,6 +10,9 @@ use PHPUnit\Framework\TestCase;
  * @covers \AKlump\Drupal\ConfigFixer\Traits\FileIOTrait
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\LoadFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class FileIOTraitTest extends TestCase {
 

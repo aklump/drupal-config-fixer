@@ -2,11 +2,13 @@
 
 namespace AKlump\DrupalConfigFixer\Tests\Unit\Helpers;
 
+use AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException;
 use AKlump\Drupal\ConfigFixer\Helpers\AddDependency;
 use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \AKlump\Drupal\ConfigFixer\Helpers\AddDependency
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class AddDependencyTest extends TestCase {
 
@@ -53,10 +55,10 @@ class AddDependencyTest extends TestCase {
       'foo',
       'module',
     ];
-    // Type keys are in schema order.
+    // A new type key goes in schema order.
     $tests[] = [
       ['dependencies' => ['config' => ['a'], 'module' => ['foo'], 'theme' => ['t']]],
-      ['dependencies' => ['theme' => ['t'], 'config' => ['a']]],
+      ['dependencies' => ['config' => ['a'], 'theme' => ['t']]],
       'foo',
       'module',
     ];
@@ -77,6 +79,23 @@ class AddDependencyTest extends TestCase {
   public function testInvoke($expected, $data, $dependency, $type) {
     $result = (new AddDependency())($data, $dependency, $type);
     $this->assertSame($expected, $result);
+  }
+
+  public function testThrowsWhenExportedNamesAreNotSorted() {
+    $this->expectException(DrupalFormatMismatchException::class);
+    $this->expectExceptionMessage('dependencies.module names');
+    (new AddDependency())(['dependencies' => ['module' => ['node', 'block']]], 'captcha');
+  }
+
+  public function testThrowsWhenExportedTypesAreNotInSchemaOrder() {
+    $this->expectException(DrupalFormatMismatchException::class);
+    $this->expectExceptionMessage('dependencies types');
+    (new AddDependency())(['dependencies' => ['theme' => ['t'], 'config' => ['a']]], 'foo');
+  }
+
+  public function testDoesNotThrowWhenDependencyIsAlreadyPresent() {
+    $data = ['dependencies' => ['module' => ['node', 'block']]];
+    $this->assertSame($data, (new AddDependency())($data, 'block'));
   }
 
   public function testTypeDefaultsToModule() {

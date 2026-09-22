@@ -12,6 +12,9 @@ use PHPUnit\Framework\TestCase;
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\LoadFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
  * @uses \AKlump\Drupal\ConfigFixer\Helpers\SortModules
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class ModulesTest extends TestCase {
 

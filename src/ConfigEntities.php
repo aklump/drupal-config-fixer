@@ -2,6 +2,7 @@
 
 namespace AKlump\Drupal\ConfigFixer;
 
+use AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException;
 use AKlump\Drupal\ConfigFixer\Helpers\AddDependency;
 use AKlump\Drupal\ConfigFixer\Helpers\RemoveDependency;
 use AKlump\Drupal\ConfigFixer\Traits\FileIOTrait;
@@ -61,12 +62,20 @@ class ConfigEntities {
    *   Receives the file's data and returns the altered data.
    *
    * @return $this
+   *
+   * @throws \AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException
+   *   If a file is not written the way this library writes Drupal config.
    */
   protected function alter(callable $callback): self {
     foreach ($this->names as $name) {
       $path = "$name.yml";
       $data = $this->load($path);
-      $altered = $callback($data);
+      try {
+        $altered = $callback($data);
+      }
+      catch (DrupalFormatMismatchException $exception) {
+        throw new DrupalFormatMismatchException("$path: " . $exception->getMessage(), 0, $exception);
+      }
       if ($altered !== $data) {
         $this->save($path, $altered);
       }

@@ -118,7 +118,15 @@ To run the fixes as a [Web Package](https://github.com/aklump/web_package) build
 
 ### Written the way Drupal writes it
 
-Every file is saved with the same YAML settings Drupal uses for a config export, and every list a call changes is put in the order Drupal would give it: permissions and dependency names alphabetically, the module list by weight and then name, and a new `dependencies` key after `uuid`, `langcode` and `status`. So a later `drush config:export` does not re-sort what this library wrote, and you choose no positions yourself. Exported config has no comments, and a file that had some loses them when it is rewritten.
+Every file is saved with the same YAML settings Drupal uses for a config export, and every list a call changes is put in the order Drupal would give it: permissions and dependency names alphabetically, the module list by weight and then name, and a new `dependencies` key after `uuid`, `langcode` and `status`. So a later `drush config:export` does not re-sort what this library wrote, and you choose no positions yourself. These rules are copied from Drupal core, not loaded from it, so each file is checked before it is rewritten. The file on disk is taken to be exactly what your Drupal exported. If re-saving it unchanged would alter any byte, or a list the call is about to re-sort is not already in that order, your Drupal writes config differently from the copied rules. The call then throws a `DrupalFormatMismatchException` naming the file and the first difference, and leaves that file untouched:
+
+```text
+user.role.editor.yml: permissions are not in the order this library sorts them. Not writing the file.
+  exported: set page title, access content
+  would be: access content, set page title
+```
+
+A file the call does not need to change is never checked. A file you edited by hand, for example to add a comment, fails the check the same way; export it again from Drupal first.
 
 A file a call needs but cannot find throws a Symfony `ParseException`; an empty file is treated as having no data.
 

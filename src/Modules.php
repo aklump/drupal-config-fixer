@@ -3,6 +3,7 @@
 namespace AKlump\Drupal\ConfigFixer;
 
 use AKlump\Drupal\ConfigFixer\Helpers\SortModules;
+use AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder;
 use AKlump\Drupal\ConfigFixer\Traits\FileIOTrait;
 
 /**
@@ -27,6 +28,9 @@ class Modules {
    * @param string $module
    *
    * @return $this
+   *
+   * @throws \AKlump\Drupal\ConfigFixer\Exception\DrupalFormatMismatchException
+   *   If the exported list is not in the order this library sorts it.
    */
   public function enable(string $module): self {
     $data = $this->load(self::PATH);
@@ -34,6 +38,8 @@ class Modules {
       return $this;
     }
     $data['module'] = $data['module'] ?? [];
+    $names = array_keys($data['module']);
+    (new VerifyOrder())(self::PATH . ': module names', $names, array_keys((new SortModules())($data['module'])));
     $data['module'][$module] = 0;
     $data['module'] = (new SortModules())($data['module']);
     $this->save(self::PATH, $data);

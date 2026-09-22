@@ -40,6 +40,10 @@ class AddDependency {
     if (in_array($dependency, $names)) {
       return $data;
     }
+    $sorted = $names;
+    sort($sorted, SORT_FLAG_CASE);
+    (new VerifyOrder())("dependencies.$type names", $names, $sorted);
+    (new VerifyOrder())('dependencies types', array_keys($dependencies), array_keys($this->sortTypes($dependencies)));
     $names[] = $dependency;
     sort($names, SORT_FLAG_CASE);
     $dependencies[$type] = $names;

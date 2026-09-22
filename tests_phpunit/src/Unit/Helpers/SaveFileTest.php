@@ -8,6 +8,9 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * @covers \AKlump\Drupal\ConfigFixer\Helpers\SaveFile
+ * @covers \AKlump\Drupal\ConfigFixer\Helpers\DumpYaml
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyDrupalFormat
+ * @uses \AKlump\Drupal\ConfigFixer\Helpers\VerifyOrder
  */
 class SaveFileTest extends TestCase {
 
