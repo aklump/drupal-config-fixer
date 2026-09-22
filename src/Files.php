@@ -16,11 +16,19 @@ class Files {
    * GIT restore a deleted file.
    *
    * @param string $relative_path
+   *   May contain wildcards, e.g. "monolog*.*"; git matches them as a pathspec.
    *
    * @return $this
+   *
+   * @throws \RuntimeException
+   *   If git fails, e.g. the path matches no file known to git.
    */
   public function restore(string $relative_path): self {
-    exec(sprintf('git restore %s/%s', $this->getBasePath(), $relative_path));
+    $path = $this->getBasePath() . "/$relative_path";
+    exec(sprintf('git restore -- %s 2>&1', escapeshellarg($path)), $output, $exit_code);
+    if ($exit_code !== 0) {
+      throw new \RuntimeException(sprintf('Could not restore "%s": %s', $path, implode(PHP_EOL, $output)));
+    }
 
     return $this;
   }

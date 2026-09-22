@@ -69,6 +69,12 @@ class ModulesTest extends TestCase {
     $this->assertSame(['foo' => 0], $this->readYaml('core.extension.yml')['module']);
   }
 
+  public function testDisableOnEmptyFileDoesNotFail() {
+    file_put_contents($this->getTempConfigDirectory() . '/core.extension.yml', '');
+    (new Modules($this->getTempConfigDirectory()))->disable('foo');
+    $this->assertSame([], $this->readYaml('core.extension.yml'));
+  }
+
   public function testAddDependencyInsertsAfterModule() {
     $modules = $this->getModules(['dependencies' => ['module' => ['foo', 'bar']]]);
     $this->assertSame($modules, $modules->addDependency('baz', 'foo'));

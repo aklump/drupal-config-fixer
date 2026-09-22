@@ -72,19 +72,59 @@ class FilesTest extends TestCase {
     $this->assertFileDoesNotExist("$base/other.yml");
   }
 
+  public function testRestoreWorksWhenBasePathContainsSpace() {
+    $base = $this->initGitRepository(['foo.yml' => 'foo: bar'], 'has space');
+    unlink("$base/foo.yml");
+    (new Files($base))->restore('foo.yml');
+    $this->assertStringEqualsFile("$base/foo.yml", 'foo: bar');
+  }
+
+  public function testRestoreAcceptsWildcardWhenBasePathContainsSpace() {
+    $base = $this->initGitRepository([
+      'monolog.settings.yml' => 'a: 1',
+      'other.yml' => 'c: 3',
+    ], 'has space');
+    unlink("$base/monolog.settings.yml");
+    unlink("$base/other.yml");
+    (new Files($base))->restore('monolog*.*');
+    $this->assertFileExists("$base/monolog.settings.yml");
+    $this->assertFileDoesNotExist("$base/other.yml");
+  }
+
+  public function testRestoreDoesNotExecuteShellMetacharactersInBasePath() {
+    $base = $this->initGitRepository(['foo.yml' => 'foo: bar'], 'a;touch pwned;b');
+    unlink("$base/foo.yml");
+    (new Files($base))->restore('foo.yml');
+    $this->assertFileDoesNotExist("$base/pwned");
+    $this->assertStringEqualsFile("$base/foo.yml", 'foo: bar');
+  }
+
+  public function testRestoreThrowsWhenGitFails() {
+    $base = $this->initGitRepository(['foo.yml' => 'foo: bar']);
+    $this->expectException(\RuntimeException::class);
+    $this->expectExceptionMessage('missing.yml');
+    (new Files($base))->restore('missing.yml');
+  }
+
   /**
    * @param array $files
    *   Keys are file names, values are the committed contents.
+   * @param string $subdirectory
+   *   Optional directory inside the temp directory to hold the repository.
    *
    * @return string
    *   The repository path.
    */
-  private function initGitRepository(array $files): string {
+  private function initGitRepository(array $files, string $subdirectory = ''): string {
     exec('command -v git', $output, $exit_code);
     if ($exit_code !== 0) {
       $this->markTestSkipped('git is not available.');
     }
     $base = $this->getTempConfigDirectory();
+    if ($subdirectory) {
+      $base .= "/$subdirectory";
+      mkdir($base);
+    }
     foreach ($files as $name => $contents) {
       file_put_contents("$base/$name", $contents);
     }

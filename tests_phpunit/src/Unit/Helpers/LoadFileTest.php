@@ -23,6 +23,12 @@ class LoadFileTest extends TestCase {
     ], (new LoadFile())($path));
   }
 
+  public function testInvokeReturnsEmptyArrayForEmptyFile() {
+    $path = $this->getTempConfigDirectory() . '/empty.yml';
+    file_put_contents($path, '');
+    $this->assertSame([], (new LoadFile())($path));
+  }
+
   public function testInvokeThrowsOnMissingFile() {
     $this->expectException(ParseException::class);
     (new LoadFile())($this->getTempConfigDirectory() . '/missing.yml');
