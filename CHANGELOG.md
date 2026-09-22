@@ -14,3 +14,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Modules::enable()` triggered a PHP 8.3+ deprecation when the "after" module is not enabled; it now appends.
 - `Permissions` used an undeclared dynamic property (deprecated in PHP 8.2).
 - Restored PHP 7.3 compatibility by removing typed properties.
+- `Files::restore()` passed the path to the shell unescaped: a base path containing a space failed silently, and shell metacharacters were executed. It now escapes the path (wildcards are still matched by git) and throws a `RuntimeException` when `git restore` fails.
+- Loading an empty YAML file (e.g. an empty `core.extension.yml`) threw a `TypeError`; it now loads as an empty array.
