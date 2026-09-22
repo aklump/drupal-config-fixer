@@ -41,12 +41,40 @@ if [[ "$error" == true ]]; then
     exit 1
 fi
 
+# ========= Force All PHP Errors To Be Displayed =========
+# Many CLI builds (MAMP, some Homebrew formulae) ship display_errors=Off, so a
+# fatal error produces a non-zero exit code and no output whatsoever -- the
+# failure has to be hunted for instead of read.  A leading ':' makes PHP append
+# this directory to its default scan path rather than replace it, so no php.ini
+# is touched and the override applies to every PHP version phpswap swaps in.
+# The variable is exported, so phpswap and the command it runs both inherit it.
+php_ini_overrides="$(mktemp -d)"
+trap 'rm -rf "$php_ini_overrides"' EXIT
+cat > "$php_ini_overrides/zz-display-errors.ini" <<'PHP_INI'
+display_errors = On
+display_startup_errors = On
+error_reporting = E_ALL
+PHP_INI
+export PHP_INI_SCAN_DIR="${PHP_INI_SCAN_DIR:-}:$php_ini_overrides"
+
 # ========= Execute PHPUnit =========
 verbose=''
 if [[ "${*}" == *'-v'* ]]; then
   verbose='-v'
 fi
+# Note: each check is a full if-block rather than a `! cmd && ... && exit 1`
+# one-liner.  In that idiom the compound command evaluates to false whenever the
+# command SUCCEEDS, which becomes the loop's -- and therefore the script's --
+# exit status, so a fully passing run would report failure to CI.
 for version in "${PHP_VERSIONS[@]}"; do
-  ! "$phpswap_directory/phpswap_execute.php" supports "$version" && failed "     PHP $version is not available in this environment.     " && continue
-  ! "$phpswap_directory/phpswap_execute.php" using "$version" $verbose "$PHPUNIT" && failed "     PHP $version tests failed.     " && exit 1
+  if ! "$phpswap_directory/phpswap_execute.php" supports "$version"; then
+    failed "     PHP $version is not available in this environment.     "
+    continue
+  fi
+  if ! "$phpswap_directory/phpswap_execute.php" using "$version" $verbose "$PHPUNIT"; then
+    failed "     PHP $version tests failed.     "
+    exit 1
+  fi
 done
+
+exit 0
